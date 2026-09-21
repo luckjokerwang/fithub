@@ -4,7 +4,6 @@ import { useFitnessStore } from './stores/fitness'
 
 import AppHeader from './components/AppHeader.vue'
 import CoachBanner from './components/CoachBanner.vue'
-import TodayRhythm from './components/TodayRhythm.vue'
 import WorkoutView from './components/WorkoutView.vue'
 import WikiView from './components/WikiView.vue'
 import HeatmapView from './components/HeatmapView.vue'
@@ -45,10 +44,7 @@ function switchNavTab(tabId) {
     <!-- Coach Banner -->
     <CoachBanner />
 
-    <!-- Today Rhythm (Shown on today tab) -->
-    <TodayRhythm v-if="store.activeTab === 'today'" />
-
-    <!-- Tab Panes -->
+    <!-- Main Content Area with unified Card Views -->
     <main class="main-content-area">
       <WorkoutView v-if="store.activeTab === 'today'" />
       <WikiView v-else-if="store.activeTab === 'wiki'" />
@@ -100,7 +96,7 @@ function switchNavTab(tabId) {
 
 <style scoped>
 .main-content-area {
-  margin-top: 10px;
+  width: 100%;
 }
 .floating-rest-timer {
   position: fixed;

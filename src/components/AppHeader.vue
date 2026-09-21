@@ -13,42 +13,38 @@ function onAvatarClick() {
 <template>
   <header class="header-bar">
     <div class="header-left">
-      <div class="bear-avatar-box" @click="onAvatarClick" title="点击听小熊打气">
-        <img src="/logo.png" alt="小熊头像" class="bear-avatar" onerror="this.src='/logo_round.png'">
+      <div class="bear-avatar-box" @click="onAvatarClick" title="戳一戳冲浪小熊">
+        <img src="/logo_round.png" alt="冲浪小熊" class="bear-avatar" onerror="this.src='/logo.png'">
         <span class="avatar-paw-badge">🐾</span>
       </div>
       <div class="header-info">
         <div class="header-title-row">
           <span class="app-brand">FitHub</span>
         </div>
-        <div class="user-subinfo">
-          {{ store.profile.name }} · {{ store.profile.height }}cm / {{ store.profile.weight }}kg
-        </div>
+        <span class="user-subinfo">{{ store.profile.name }} · {{ store.profile.height }}cm / {{ store.profile.weight }}kg</span>
       </div>
     </div>
 
     <div class="header-actions">
       <!-- Sync Pill Badge -->
       <button 
-        class="btn-icon-pill" 
+        class="btn-icon-pill sync-btn-cloud" 
         :class="{ 'syncing': store.syncStatus === 'syncing' }"
-        style="color: var(--cute-mint-dark); background: var(--cute-mint-light); border-color: #a7f3d0;"
         @click="store.fetchCloudState"
-        title="点击立即与云端同步"
+        title="点击同步多端最新数据"
       >
-        <span>☁️</span>
-        <span>{{ store.syncLabel }}</span>
+        <span id="syncIcon">☁️</span>
+        <span id="syncText">{{ store.syncLabel }}</span>
       </button>
 
       <!-- Calendar Button -->
-      <button class="btn-icon-pill" @click="store.icsModal.visible = true">
-        <span>📅</span>
-        <span>日历</span>
+      <button class="btn-icon-pill" @click="store.icsModal.visible = true" title="导出日历订阅">
+        📅 日历
       </button>
 
       <!-- Settings Button -->
-      <button class="btn-icon-pill" style="padding: 5px 8px;" @click="store.settingsModal.visible = true">
-        <span>⚙️</span>
+      <button class="btn-icon-pill" @click="store.settingsModal.visible = true" title="设置与备份">
+        ⚙️
       </button>
     </div>
   </header>

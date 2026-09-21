@@ -17,16 +17,16 @@ function nextQuote() {
 </script>
 
 <template>
-  <div class="bear-coach-card" @click="nextQuote" title="点击切换教练金句">
-    <div class="bear-coach-header">
-      <span style="font-size: 1.3rem;">🏄‍♂️</span>
-      <div style="display: flex; align-items: center; gap: 4px;">
-        <span style="font-weight: 800; font-size: 0.86rem; color: var(--cute-coral-dark);">冲浪小熊教练</span>
-        <span style="font-size: 0.68rem; color: var(--cute-coral); font-weight: 700;">🟠 在线陪练</span>
+  <section class="bear-cheer-card" @click="nextQuote" title="点击切换教练金句">
+    <div class="cheer-icon">🏄‍♂️</div>
+    <div class="cheer-content">
+      <div class="cheer-title">
+        <span>冲浪小熊教练</span>
+        <span style="font-size: 0.7rem; color: #ea580c; font-weight: normal;">● 在线陪练</span>
+      </div>
+      <div class="cheer-msg">
+        {{ currentQuote }}
       </div>
     </div>
-    <div class="bear-speech-bubble">
-      <span>{{ currentQuote }}</span>
-    </div>
-  </div>
+  </section>
 </template>
