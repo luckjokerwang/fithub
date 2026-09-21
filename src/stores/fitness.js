@@ -226,12 +226,11 @@ export const useFitnessStore = defineStore('fitness', {
           const res = await resp.json()
           if (res && res.status === 'ok' && res.data) {
             const cloud = res.data
-            if (cloud.checkins) Object.assign(this.checkins, cloud.checkins)
+            if (cloud.checkins) {
+              this.checkins = { ...cloud.checkins }
+            }
             if (cloud.sets) {
-              for (const k in cloud.sets) {
-                if (!this.sets[k]) this.sets[k] = {}
-                Object.assign(this.sets[k], cloud.sets[k])
-              }
+              this.sets = { ...cloud.sets }
             }
             if (cloud.custom_slots) Object.assign(this.custom_slots, cloud.custom_slots)
             if (cloud.favorites) this.favorites = cloud.favorites

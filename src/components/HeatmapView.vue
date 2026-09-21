@@ -1,134 +1,186 @@
 <script setup>
-import { ref, computed, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useFitnessStore } from '../stores/fitness'
 
 const store = useFitnessStore()
-const scrollContainerRef = ref(null)
 
-// Color mode: 'split' (推/拉/腿/休) or 'github' (经典4阶绿色)
-const colorMode = ref('split') // 'split' | 'github'
+// Current viewing year and month (default to today: 2026-09)
+const todayDate = new Date()
+const viewYear = ref(todayDate.getFullYear())
+const viewMonth = ref(todayDate.getMonth() + 1) // 1-indexed
+
+// Color mode: 'split' (分化色) | 'github' (经典4阶绿)
+const colorMode = ref('split')
 
 // Selected cell for interactive inspection
 const selectedDate = ref(store.todayStr)
 
-const WEEKS_COUNT = 16
-const DAYS_PER_WEEK = 7
-const TOTAL_DAYS = WEEKS_COUNT * DAYS_PER_WEEK // 112 days
+// Touch swipe tracking
+let touchStartX = 0
+let touchStartY = 0
 
-const weekdayLabels = [
-  { label: '一', row: 0 },
-  { label: '三', row: 2 },
-  { label: '五', row: 4 },
-  { label: '日', row: 6 }
-]
+function onTouchStart(e) {
+  if (e.touches.length === 1) {
+    touchStartX = e.touches[0].clientX
+    touchStartY = e.touches[0].clientY
+  }
+}
 
-// 16-week matrix calculation
-const calendarData = computed(() => {
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
+function onTouchEnd(e) {
+  if (e.changedTouches.length === 1) {
+    const deltaX = e.changedTouches[0].clientX - touchStartX
+    const deltaY = e.changedTouches[0].clientY - touchStartY
+    // Only trigger if horizontal swipe is dominant and > 45px
+    if (Math.abs(deltaX) > 45 && Math.abs(deltaX) > Math.abs(deltaY) * 1.5) {
+      if (deltaX < 0) {
+        nextMonth()
+      } else {
+        prevMonth()
+      }
+    }
+  }
+}
+
+function prevMonth() {
+  if (viewMonth.value === 1) {
+    viewYear.value--
+    viewMonth.value = 12
+  } else {
+    viewMonth.value--
+  }
+}
+
+function nextMonth() {
+  if (viewMonth.value === 12) {
+    viewYear.value++
+    viewMonth.value = 1
+  } else {
+    viewMonth.value++
+  }
+}
+
+function resetToCurrentMonth() {
+  const d = new Date()
+  viewYear.value = d.getFullYear()
+  viewMonth.value = d.getMonth() + 1
+  selectedDate.value = store.todayStr
+}
+
+const isCurrentMonthView = computed(() => {
+  const d = new Date()
+  return viewYear.value === d.getFullYear() && viewMonth.value === (d.getMonth() + 1)
+})
+
+const monthTitle = computed(() => {
+  return `${viewYear.value}年 ${viewMonth.value}月`
+})
+
+// Generate calendar cells for viewYear and viewMonth
+const monthCalendar = computed(() => {
+  const y = viewYear.value
+  const m = viewMonth.value
   const todayStr = store.todayStr
+  const todayObj = new Date()
+  todayObj.setHours(0, 0, 0, 0)
 
-  // End on current week's Sunday
-  const dayOfWeek = today.getDay() // 0 is Sunday, 1 is Monday...
-  const daysToSunday = dayOfWeek === 0 ? 0 : 7 - dayOfWeek
-  const endDate = new Date(today)
-  endDate.setDate(today.getDate() + daysToSunday)
+  // First day of month
+  const firstDay = new Date(y, m - 1, 1)
+  // Day of week: 0 is Sunday, 1 is Monday...
+  let startWeekday = firstDay.getDay()
+  // Convert to Monday = 0, Sunday = 6
+  startWeekday = startWeekday === 0 ? 6 : startWeekday - 1
 
-  const startDate = new Date(endDate)
-  startDate.setDate(endDate.getDate() - TOTAL_DAYS + 1)
+  // Total days in month
+  const totalDays = new Date(y, m, 0).getDate()
 
-  const weeks = []
-  let prevMonth = -1
+  const days = []
 
-  for (let w = 0; w < WEEKS_COUNT; w++) {
-    const days = []
-    let monthLabel = ''
+  // Leading empty cells
+  for (let i = 0; i < startWeekday; i++) {
+    days.push({ empty: true, key: `empty-lead-${i}` })
+  }
 
-    for (let d = 0; d < DAYS_PER_WEEK; d++) {
-      const cur = new Date(startDate)
-      cur.setDate(startDate.getDate() + w * 7 + d)
-      cur.setHours(0, 0, 0, 0)
+  // Days in month
+  for (let d = 1; d <= totalDays; d++) {
+    const cur = new Date(y, m - 1, d)
+    cur.setHours(0, 0, 0, 0)
+    const mStr = String(m).padStart(2, '0')
+    const dStr = String(d).padStart(2, '0')
+    const dateStr = `${y}-${mStr}-${dStr}`
 
-      const y = cur.getFullYear()
-      const m = cur.getMonth()
-      const mStr = String(m + 1).padStart(2, '0')
-      const dStr = String(cur.getDate()).padStart(2, '0')
-      const dateStr = `${y}-${mStr}-${dStr}`
+    const isFuture = cur.getTime() > todayObj.getTime()
+    const isToday = dateStr === todayStr
+    const checkin = store.checkins[dateStr]
+    const isDone = !!(checkin && checkin.done)
 
-      // Check if month changes in this week
-      if (m !== prevMonth) {
-        prevMonth = m
-        monthLabel = `${m + 1}月`
-      }
+    // Calculate sets count
+    const daySets = store.sets[dateStr] || {}
+    const completedSets = Object.values(daySets).filter(Boolean).length
 
-      const isFuture = cur.getTime() > today.getTime()
-      const isToday = dateStr === todayStr
-      const checkin = store.checkins[dateStr]
-      const isDone = !!(checkin && checkin.done)
-
-      // Calculate sets count
-      const daySets = store.sets[dateStr] || {}
-      const completedSets = Object.values(daySets).filter(Boolean).length
-
-      // Intensity level (0-4)
-      let level = 0
-      if (isDone) {
-        if (completedSets >= 12) level = 4
-        else if (completedSets >= 8) level = 3
-        else if (completedSets >= 4) level = 2
-        else level = 2 // default to level 2 if checked in
-      }
-
-      const cycleInfo = store.getCycleForDate(dateStr)
-
-      days.push({
-        dateStr,
-        dayNum: cur.getDate(),
-        month: m + 1,
-        dayOfWeek: d, // 0: Mon, 6: Sun
-        isFuture,
-        isToday,
-        isDone,
-        level,
-        completedSets,
-        cycleType: checkin?.type || cycleInfo.type,
-        cycleLabel: cycleInfo.label,
-        cycleEmoji: cycleInfo.emoji,
-        cycleDesc: cycleInfo.desc
-      })
+    // Intensity level (0-4) for GitHub mode
+    let level = 0
+    if (isDone) {
+      if (completedSets >= 12) level = 4
+      else if (completedSets >= 8) level = 3
+      else if (completedSets >= 4) level = 2
+      else level = 2 // default to level 2 if checked in
     }
 
-    weeks.push({
-      weekIndex: w,
-      monthLabel,
-      days
+    const cycleInfo = store.getCycleForDate(dateStr)
+
+    // Normalize cycleType
+    let cycleType = checkin?.type || cycleInfo.type
+    if (!['push', 'pull', 'legs', 'rest'].includes(cycleType)) {
+      cycleType = 'custom'
+    }
+
+    days.push({
+      empty: false,
+      dateStr,
+      dayNum: d,
+      weekday: cur.getDay() === 0 ? 6 : cur.getDay() - 1,
+      isFuture,
+      isToday,
+      isDone,
+      level,
+      completedSets,
+      cycleType,
+      cycleLabel: cycleInfo.label,
+      cycleEmoji: cycleInfo.emoji,
+      cycleDesc: cycleInfo.desc,
+      key: dateStr
     })
   }
 
-  return { weeks, startDate, endDate }
+  // Trailing empty cells to complete the last week row
+  const remainder = days.length % 7
+  if (remainder !== 0) {
+    const need = 7 - remainder
+    for (let i = 0; i < need; i++) {
+      days.push({ empty: true, key: `empty-trail-${i}` })
+    }
+  }
+
+  return days
 })
 
-// Statistics
-const stats = computed(() => {
-  const weeks = calendarData.value.weeks
+// Statistics for the currently viewed month
+const monthStats = computed(() => {
+  const days = monthCalendar.value.filter(d => !d.empty)
   let totalDone = 0
   let pastDays = 0
-  const allDays = []
 
-  weeks.forEach(w => {
-    w.days.forEach(d => {
-      allDays.push(d)
-      if (!d.isFuture) {
-        pastDays++
-        if (d.isDone) totalDone++
-      }
-    })
+  days.forEach(d => {
+    if (!d.isFuture) {
+      pastDays++
+      if (d.isDone) totalDone++
+    }
   })
 
-  // Calculate longest streak
+  // Longest streak in this month
   let maxStreak = 0
   let tempStreak = 0
-  allDays.forEach(d => {
+  days.forEach(d => {
     if (d.isDone) {
       tempStreak++
       if (tempStreak > maxStreak) maxStreak = tempStreak
@@ -149,17 +201,16 @@ const stats = computed(() => {
 
 // Selected cell info
 const selectedCellInfo = computed(() => {
-  for (const w of calendarData.value.weeks) {
-    for (const d of w.days) {
-      if (d.dateStr === selectedDate.value) {
-        return d
-      }
+  for (const d of monthCalendar.value) {
+    if (!d.empty && d.dateStr === selectedDate.value) {
+      return d
     }
   }
   return null
 })
 
 function selectCell(cell) {
+  if (cell.empty) return
   selectedDate.value = cell.dateStr
 }
 
@@ -171,35 +222,41 @@ function toggleSelectedCheckin() {
   } else {
     delete store.checkins[dateStr]
   }
+  // Immediate snapshot sync to cloud
   store.queuePushCloud()
 }
 
-// Auto scroll to right end on mount
 onMounted(() => {
-  nextTick(() => {
-    if (scrollContainerRef.value) {
-      scrollContainerRef.value.scrollLeft = scrollContainerRef.value.scrollWidth
-    }
-  })
+  resetToCurrentMonth()
 })
 </script>
 
 <template>
   <div class="heatmap-view-container">
     <div class="heatmap-card">
-      <!-- Title & Theme Toggle Header -->
-      <div class="heatmap-header">
-        <div style="display: flex; align-items: center; gap: 6px;">
-          <span class="card-title-text">🟩 训练打卡热力图</span>
-          <span class="card-meta-pill">112天 / 16周</span>
+      <!-- Minimalist Month Navigation Header (No Extra Tabs) -->
+      <div class="month-header-bar">
+        <div class="month-selector">
+          <button class="btn-month-nav" @click="prevMonth" title="上一月">‹</button>
+          <span class="month-title-text">{{ monthTitle }}</span>
+          <button class="btn-month-nav" @click="nextMonth" title="下一月">›</button>
+          <button 
+            v-if="!isCurrentMonthView" 
+            class="btn-back-current" 
+            @click="resetToCurrentMonth"
+            title="回到当前月"
+          >
+            回到本月
+          </button>
         </div>
 
+        <!-- Color Theme Switcher -->
         <div class="theme-toggle-group">
           <button 
             class="theme-btn" 
             :class="{ 'active': colorMode === 'split' }"
             @click="colorMode = 'split'"
-            title="按训练分化部位着色"
+            title="按训练部位分化色着色"
           >
             🎨 分化色
           </button>
@@ -207,98 +264,111 @@ onMounted(() => {
             class="theme-btn" 
             :class="{ 'active': colorMode === 'github' }"
             @click="colorMode = 'github'"
-            title="经典 GitHub 原谅绿4阶强度着色"
+            title="经典 GitHub 4阶绿着色"
           >
-            🟩 GitHub绿
+            🟩 经典绿
           </button>
         </div>
       </div>
 
-      <!-- 4-Stat Metric Strip -->
+      <!-- 4 Metrics Strip for Current Month -->
       <div class="heatmap-stats-strip">
         <div class="heat-stat-card">
-          <span class="heat-stat-val">{{ stats.totalDone }}</span>
-          <span class="heat-stat-lbl">累计出勤 (天)</span>
+          <span class="heat-stat-val">{{ monthStats.totalDone }}</span>
+          <span class="heat-stat-lbl">当月出勤 (天)</span>
         </div>
         <div class="heat-stat-card">
-          <span class="heat-stat-val" style="color: var(--cute-coral);">{{ stats.currentStreak }}</span>
+          <span class="heat-stat-val" style="color: var(--cute-coral);">{{ monthStats.currentStreak }}</span>
           <span class="heat-stat-lbl">当前连续 (天)</span>
         </div>
         <div class="heat-stat-card">
-          <span class="heat-stat-val" style="color: #ea580c;">{{ stats.maxStreak }}</span>
-          <span class="heat-stat-lbl">最长连续 (天)</span>
+          <span class="heat-stat-val" style="color: #ea580c;">{{ monthStats.maxStreak }}</span>
+          <span class="heat-stat-lbl">当月最长 (天)</span>
         </div>
         <div class="heat-stat-card">
-          <span class="heat-stat-val" style="color: #16a34a;">{{ stats.rate }}%</span>
-          <span class="heat-stat-lbl">打卡出勤率</span>
+          <span class="heat-stat-val" style="color: #16a34a;">{{ monthStats.rate }}%</span>
+          <span class="heat-stat-lbl">出勤完成率</span>
         </div>
       </div>
 
-      <!-- GitHub-Style Contribution Calendar -->
-      <div class="github-calendar-wrapper" ref="scrollContainerRef">
-        <div class="github-calendar-content">
-          <!-- Month Labels Header Row -->
-          <div class="month-labels-row">
-            <div class="month-label-spacer"></div>
-            <div class="month-labels-track">
-              <div 
-                v-for="week in calendarData.weeks" 
-                :key="'m-' + week.weekIndex" 
-                class="month-col"
-              >
-                <span v-if="week.monthLabel" class="month-text">{{ week.monthLabel }}</span>
-              </div>
-            </div>
-          </div>
+      <!-- Swipeable Month Calendar Body -->
+      <div 
+        class="month-calendar-container"
+        @touchstart="onTouchStart"
+        @touchend="onTouchEnd"
+      >
+        <!-- Weekday Headers (一 到 日) -->
+        <div class="weekday-header-grid">
+          <span class="wh-col">一</span>
+          <span class="wh-col">二</span>
+          <span class="wh-col">三</span>
+          <span class="wh-col">四</span>
+          <span class="wh-col">五</span>
+          <span class="wh-col weekend">六</span>
+          <span class="wh-col weekend">日</span>
+        </div>
 
-          <!-- Main Grid: Left Y-Axis Weekday Labels + 16 Week Columns -->
-          <div class="calendar-body-row">
-            <!-- Weekday Y-Axis -->
-            <div class="weekday-labels-col">
-              <span class="weekday-label" style="grid-row: 1;">一</span>
-              <span class="weekday-label" style="grid-row: 3;">三</span>
-              <span class="weekday-label" style="grid-row: 5;">五</span>
-              <span class="weekday-label" style="grid-row: 7;">日</span>
-            </div>
-
-            <!-- 16 Week Columns -->
-            <div class="weeks-grid-track">
-              <div 
-                v-for="week in calendarData.weeks" 
-                :key="'w-' + week.weekIndex"
-                class="week-column"
-              >
-                <div 
-                  v-for="day in week.days" 
-                  :key="day.dateStr"
-                  class="day-square"
-                  :class="[
-                    colorMode === 'github' ? ('gh-level-' + (day.isDone ? day.level : 0)) : ('split-' + (day.isDone ? day.cycleType : 'empty')),
-                    {
-                      'is-today': day.isToday,
-                      'is-selected': day.dateStr === selectedDate,
-                      'is-future': day.isFuture
-                    }
-                  ]"
-                  @click="selectCell(day)"
-                ></div>
-              </div>
-            </div>
+        <!-- Month Days Grid -->
+        <div class="month-days-grid">
+          <div 
+            v-for="cell in monthCalendar" 
+            :key="cell.key"
+            class="month-day-cell"
+            :class="[
+              cell.empty ? 'cell-empty-slot' : '',
+              !cell.empty && cell.isDone ? (colorMode === 'github' ? ('gh-level-' + cell.level) : ('split-' + cell.cycleType)) : (!cell.empty ? 'split-empty' : ''),
+              {
+                'is-today': !cell.empty && cell.isToday,
+                'is-selected': !cell.empty && cell.dateStr === selectedDate,
+                'is-future': !cell.empty && cell.isFuture
+              }
+            ]"
+            @click="selectCell(cell)"
+          >
+            <span v-if="!cell.empty" class="day-number">{{ cell.dayNum }}</span>
           </div>
+        </div>
 
-          <!-- Bottom Legend Strip -->
-          <div class="calendar-legend-row">
-            <span class="legend-hint">💡 点击任意格子查看详情或补卡/撤卡</span>
-            <div class="legend-scale">
-              <span class="legend-text">少</span>
-              <div class="legend-sq" :class="colorMode === 'github' ? 'gh-level-0' : 'split-empty'"></div>
-              <div class="legend-sq" :class="colorMode === 'github' ? 'gh-level-1' : 'split-push-light'"></div>
-              <div class="legend-sq" :class="colorMode === 'github' ? 'gh-level-2' : 'split-pull'"></div>
-              <div class="legend-sq" :class="colorMode === 'github' ? 'gh-level-3' : 'split-legs'"></div>
-              <div class="legend-sq" :class="colorMode === 'github' ? 'gh-level-4' : 'split-push'"></div>
-              <span class="legend-text">多</span>
-            </div>
+        <div class="swipe-hint-bar">
+          <span>👈 左右滑动切换月份 👉</span>
+        </div>
+      </div>
+
+      <!-- Color Legend Box (Clear Explanation) -->
+      <div class="legend-card-box">
+        <div v-if="colorMode === 'split'" class="split-legend-grid">
+          <div class="leg-item">
+            <span class="leg-dot split-push"></span>
+            <span class="leg-label">推日 (胸/肩前/三头)</span>
           </div>
+          <div class="leg-item">
+            <span class="leg-dot split-pull"></span>
+            <span class="leg-label">拉日 (背/肩后/二头)</span>
+          </div>
+          <div class="leg-item">
+            <span class="leg-dot split-legs"></span>
+            <span class="leg-label">腿日 (股四/腘绳/臀)</span>
+          </div>
+          <div class="leg-item">
+            <span class="leg-dot split-rest"></span>
+            <span class="leg-label">休息日 (超量恢复)</span>
+          </div>
+          <div class="leg-item">
+            <span class="leg-dot split-empty"></span>
+            <span class="leg-label">未练/未打卡</span>
+          </div>
+        </div>
+
+        <div v-else class="github-legend-row">
+          <span class="leg-text">打卡训练量：少</span>
+          <div class="leg-sq-row">
+            <span class="gh-sq gh-level-0"></span>
+            <span class="gh-sq gh-level-1"></span>
+            <span class="gh-sq gh-level-2"></span>
+            <span class="gh-sq gh-level-3"></span>
+            <span class="gh-sq gh-level-4"></span>
+          </div>
+          <span class="leg-text">多 (按组数)</span>
         </div>
       </div>
 
@@ -308,7 +378,7 @@ onMounted(() => {
           <div style="display: flex; align-items: center; gap: 8px;">
             <span class="sel-date-text">{{ selectedCellInfo.dateStr }}</span>
             <span class="sel-weekday-tag">
-              周{{ ['一','二','三','四','五','六','日'][selectedCellInfo.dayOfWeek] }}
+              周{{ ['一','二','三','四','五','六','日'][selectedCellInfo.weekday] }}
               {{ selectedCellInfo.isToday ? '· 今天' : '' }}
             </span>
           </div>
@@ -351,13 +421,62 @@ onMounted(() => {
   box-sizing: border-box;
 }
 
-.heatmap-header {
+/* Month Navigation Header */
+.month-header-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
   margin-bottom: 12px;
   flex-wrap: wrap;
+}
+
+.month-selector {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.month-title-text {
+  font-size: 1.12rem;
+  font-weight: 800;
+  color: var(--text-title);
+  white-space: nowrap;
+}
+
+.btn-month-nav {
+  background: #fdfaf6;
+  border: 1.5px solid var(--border-card);
+  border-bottom: 2.5px solid var(--border-card-hover);
+  border-radius: 8px;
+  width: 28px;
+  height: 28px;
+  font-size: 1.2rem;
+  font-weight: bold;
+  line-height: 1;
+  color: var(--text-body);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.1s ease;
+}
+
+.btn-month-nav:active {
+  transform: translateY(1.5px);
+  border-bottom-width: 1.5px;
+}
+
+.btn-back-current {
+  background: var(--cute-coral-light);
+  border: 1px solid var(--cute-coral);
+  color: var(--cute-coral-dark);
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 999px;
+  cursor: pointer;
+  white-space: nowrap;
 }
 
 .theme-toggle-group {
@@ -378,6 +497,7 @@ onMounted(() => {
   color: var(--text-muted);
   cursor: pointer;
   transition: all 0.15s ease;
+  white-space: nowrap;
 }
 
 .theme-btn.active {
@@ -419,178 +539,235 @@ onMounted(() => {
   white-space: nowrap;
 }
 
-/* GitHub Contribution Calendar Grid */
-.github-calendar-wrapper {
-  width: 100%;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  padding: 6px 0;
-  margin-bottom: 10px;
-  scrollbar-width: thin;
-  scrollbar-color: #ebdcd0 transparent;
+/* Month Calendar Grid */
+.month-calendar-container {
+  background: #fff;
+  border: 1.5px solid #ebdcd0;
+  border-radius: 16px;
+  padding: 10px;
+  margin-bottom: 12px;
+  user-select: none;
+  touch-action: pan-y;
 }
 
-.github-calendar-wrapper::-webkit-scrollbar {
-  height: 5px;
-}
-.github-calendar-wrapper::-webkit-scrollbar-thumb {
-  background: #ebdcd0;
-  border-radius: 999px;
-}
-
-.github-calendar-content {
-  width: max-content;
-  margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  padding: 2px;
+.weekday-header-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 5px;
+  text-align: center;
+  margin-bottom: 6px;
 }
 
-/* Month Labels Row */
-.month-labels-row {
+.wh-col {
+  font-size: 0.74rem;
+  font-weight: 800;
+  color: var(--text-muted);
+  padding: 2px 0;
+}
+
+.wh-col.weekend {
+  color: var(--cute-coral);
+}
+
+.month-days-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 5px;
+}
+
+.month-day-cell {
+  aspect-ratio: 1 / 1;
+  border-radius: 10px;
+  background-color: #f4ede6; /* Fallback default background prevents transparent disappear */
   display: flex;
   align-items: center;
-  height: 16px;
-  margin-bottom: 4px;
-}
-
-.month-label-spacer {
-  width: 16px;
-  flex-shrink: 0;
-}
-
-.month-labels-track {
-  display: flex;
-  gap: 3.5px;
-}
-
-.month-col {
-  width: 12px;
-  position: relative;
-}
-
-.month-text {
-  position: absolute;
-  left: 0;
-  top: -2px;
-  font-size: 9px;
-  font-weight: 700;
-  color: #8c7e7d;
-  white-space: nowrap;
-}
-
-/* Calendar Body Row (Left Y-Axis + 16 Columns) */
-.calendar-body-row {
-  display: flex;
-  gap: 4px;
-}
-
-.weekday-labels-col {
-  display: grid;
-  grid-template-rows: repeat(7, 12px);
-  gap: 3.5px;
-  width: 12px;
-  text-align: right;
-  flex-shrink: 0;
-}
-
-.weekday-label {
-  font-size: 9px;
-  line-height: 12px;
-  font-weight: 700;
-  color: #a39493;
-}
-
-.weeks-grid-track {
-  display: flex;
-  gap: 3.5px;
-}
-
-.week-column {
-  display: grid;
-  grid-template-rows: repeat(7, 12px);
-  gap: 3.5px;
-  width: 12px;
-}
-
-/* Day Square: Pure clean flat pixel style (NO numbers) */
-.day-square {
-  width: 12px;
-  height: 12px;
-  border-radius: 2px;
-  box-sizing: border-box;
+  justify-content: center;
   cursor: pointer;
-  transition: transform 0.1s ease, outline-color 0.1s ease;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
   position: relative;
+  box-sizing: border-box;
 }
 
-.day-square:hover:not(.is-future) {
-  transform: scale(1.25);
-  z-index: 10;
+.cell-empty-slot {
+  background-color: transparent !important;
+  cursor: default !important;
 }
 
-.day-square.is-future {
-  opacity: 0.22;
-  cursor: default;
-}
-
-.day-square.is-today {
-  outline: 2px solid #2d2424;
-  outline-offset: 1px;
+.month-day-cell:hover:not(.cell-empty-slot):not(.is-future) {
+  transform: scale(1.08);
   z-index: 5;
 }
 
-.day-square.is-selected {
-  outline: 2px solid var(--cute-coral);
-  outline-offset: 1.5px;
+.day-number {
+  font-size: 0.84rem;
+  font-weight: 800;
+  color: var(--text-body);
+}
+
+/* Today Outline */
+.month-day-cell.is-today {
+  outline: 2.5px solid #2d2424;
+  outline-offset: -1px;
+  z-index: 4;
+}
+
+/* Selected Ring */
+.month-day-cell.is-selected {
+  box-shadow: 0 0 0 3px rgba(255, 107, 87, 0.45);
   z-index: 6;
 }
 
-/* Colors: GitHub Classic 4-Level Green */
-.gh-level-0 { background: #ebdcd0; }
-.gh-level-1 { background: #9be9a8; }
-.gh-level-2 { background: #40c463; }
-.gh-level-3 { background: #30a14e; }
-.gh-level-4 { background: #216e39; }
+/* Future Day */
+.month-day-cell.is-future {
+  opacity: 0.28;
+  cursor: default;
+}
 
-/* Colors: Cute Workout Split Mode */
-.split-empty { background: #ebdcd0; }
-.split-push { background: #ff6b57; }
-.split-push-light { background: #ffaa99; }
-.split-pull { background: #6366f1; }
-.split-legs { background: #f59e0b; }
-.split-rest { background: #10b981; }
+/* Colors: Split Colors (推/拉/腿/休/自) */
+.split-empty {
+  background-color: #f4ede6 !important;
+}
+.split-empty .day-number {
+  color: #716260;
+}
 
-/* Legend Row */
-.calendar-legend-row {
+.split-push {
+  background-color: #ff6b57 !important;
+}
+.split-push .day-number {
+  color: #fff !important;
+}
+
+.split-pull {
+  background-color: #6366f1 !important;
+}
+.split-pull .day-number {
+  color: #fff !important;
+}
+
+.split-legs {
+  background-color: #f59e0b !important;
+}
+.split-legs .day-number {
+  color: #fff !important;
+}
+
+.split-rest {
+  background-color: #10b981 !important;
+}
+.split-rest .day-number {
+  color: #fff !important;
+}
+
+.split-custom {
+  background-color: #ec4899 !important;
+}
+.split-custom .day-number {
+  color: #fff !important;
+}
+
+/* Colors: GitHub 4-Level Green */
+.gh-level-0 {
+  background-color: #f4ede6 !important;
+}
+.gh-level-0 .day-number {
+  color: #716260;
+}
+
+.gh-level-1 {
+  background-color: #9be9a8 !important;
+}
+.gh-level-1 .day-number {
+  color: #166534 !important;
+}
+
+.gh-level-2 {
+  background-color: #40c463 !important;
+}
+.gh-level-2 .day-number {
+  color: #fff !important;
+}
+
+.gh-level-3 {
+  background-color: #30a14e !important;
+}
+.gh-level-3 .day-number {
+  color: #fff !important;
+}
+
+.gh-level-4 {
+  background-color: #216e39 !important;
+}
+.gh-level-4 .day-number {
+  color: #fff !important;
+}
+
+.swipe-hint-bar {
+  text-align: center;
+  font-size: 0.68rem;
+  color: #a89f9e;
+  margin-top: 8px;
+}
+
+/* Legend Card Box */
+.legend-card-box {
+  background: #faf5ee;
+  border: 1.5px solid #ebdcd0;
+  border-radius: 12px;
+  padding: 8px 10px;
+  margin-bottom: 12px;
+}
+
+.split-legend-grid {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.leg-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.leg-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.leg-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--text-body);
+}
+
+.github-legend-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-top: 8px;
-  font-size: 0.7rem;
-  color: var(--text-muted);
-  gap: 8px;
+  gap: 6px;
 }
 
-.legend-hint {
+.leg-text {
   font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--text-muted);
 }
 
-.legend-scale {
+.leg-sq-row {
   display: flex;
   align-items: center;
-  gap: 3px;
+  gap: 4px;
 }
 
-.legend-sq {
-  width: 9px;
-  height: 9px;
-  border-radius: 2px;
-}
-
-.legend-text {
-  font-size: 0.65rem;
-  padding: 0 2px;
+.gh-sq {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
 }
 
 /* Selected Date Detail Card */
@@ -613,7 +790,7 @@ onMounted(() => {
 }
 
 .sel-date-text {
-  font-size: 0.88rem;
+  font-size: 0.9rem;
   font-weight: 800;
   color: var(--text-title);
 }
@@ -640,8 +817,8 @@ onMounted(() => {
   border: 1.5px solid var(--cute-coral-dark);
   border-bottom: 2.5px solid var(--cute-coral-dark);
   border-radius: 10px;
-  padding: 6px 12px;
-  font-size: 0.76rem;
+  padding: 7px 12px;
+  font-size: 0.78rem;
   font-weight: 800;
   cursor: pointer;
   flex-shrink: 0;
