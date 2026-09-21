@@ -33,19 +33,57 @@ function onAvatarClick() {
         @click="store.fetchCloudState"
         title="点击同步多端最新数据"
       >
-        <span id="syncIcon">☁️</span>
-        <span id="syncText">{{ store.syncLabel }}</span>
+        <span>☁️</span>
+        <span class="btn-text-hide-mobile">{{ store.syncLabel }}</span>
       </button>
 
       <!-- Calendar Button -->
       <button class="btn-icon-pill" @click="store.icsModal.visible = true" title="导出日历订阅">
-        📅 日历
+        <span>📅</span>
+        <span class="btn-text-hide-mobile">日历</span>
       </button>
 
       <!-- Settings Button -->
       <button class="btn-icon-pill" @click="store.settingsModal.visible = true" title="设置与备份">
-        ⚙️
+        <span>⚙️</span>
       </button>
     </div>
   </header>
 </template>
+
+<style scoped>
+@media (max-width: 480px) {
+  .header-bar {
+    padding: 8px 10px;
+    gap: 6px;
+  }
+  .bear-avatar-box, .bear-avatar {
+    width: 38px;
+    height: 38px;
+  }
+  .app-brand {
+    font-size: 1.05rem;
+  }
+  .user-subinfo {
+    max-width: 120px;
+    font-size: 0.68rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .btn-icon-pill {
+    padding: 4px 6px;
+    font-size: 0.72rem;
+    gap: 2px;
+  }
+}
+
+@media (max-width: 390px) {
+  .btn-text-hide-mobile {
+    display: none;
+  }
+  .user-subinfo {
+    max-width: 95px;
+  }
+}
+</style>

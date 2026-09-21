@@ -44,6 +44,11 @@
             -webkit-tap-highlight-color: transparent;
         }
 
+        html, body {
+            overflow-x: hidden;
+            width: 100%;
+        }
+
         body {
             background-color: var(--bg-page);
             color: var(--text-body);
@@ -53,7 +58,7 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding-bottom: 96px;
+            padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
             background-image: 
                 radial-gradient(circle at 10% 20%, rgba(255, 107, 87, 0.06) 0%, transparent 40%),
                 radial-gradient(circle at 90% 80%, rgba(14, 165, 233, 0.06) 0%, transparent 40%),
@@ -64,10 +69,13 @@
         .app-container {
             width: 100%;
             max-width: 580px;
+            min-width: 0;
             padding: 12px 14px;
             display: flex;
             flex-direction: column;
             gap: 12px;
+            box-sizing: border-box;
+            overflow-x: hidden;
         }
 
         /* 顶部元气导航栏 */
@@ -314,7 +322,7 @@
         /* 练二休一四步循环指示器 */
         .cycle-flow-container {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
+            grid-template-columns: repeat(4, minmax(0, 1fr));
             gap: 5px;
             background: #faf5ee;
             padding: 6px;
@@ -334,6 +342,8 @@
             border-bottom: 2.5px solid #decbbe;
             text-align: center;
             transition: all 0.2s ease;
+            min-width: 0;
+            overflow: hidden;
         }
 
         .cycle-step-item.active {
@@ -346,7 +356,7 @@
         }
 
         .cycle-step-name {
-            font-size: 0.82rem;
+            font-size: clamp(0.72rem, 2.6vw, 0.82rem);
             font-weight: 800;
             white-space: nowrap;
         }
@@ -356,10 +366,14 @@
         }
 
         .cycle-step-sub {
-            font-size: 0.68rem;
+            font-size: clamp(0.58rem, 2.2vw, 0.68rem);
             color: var(--text-muted);
             margin-top: 1px;
             white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            width: 100%;
+            text-align: center;
         }
 
         .cycle-step-item.active .cycle-step-sub {
@@ -441,7 +455,7 @@
         /* 3等分部位切换器 */
         .split-segment-grid {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(3, minmax(0, 1fr));
             gap: 6px;
             margin-top: 4px;
         }
@@ -453,7 +467,7 @@
             color: var(--text-body);
             padding: 8px 2px;
             border-radius: 12px;
-            font-size: 0.84rem;
+            font-size: clamp(0.75rem, 3vw, 0.84rem);
             font-weight: 800;
             cursor: pointer;
             display: flex;
@@ -462,6 +476,7 @@
             gap: 3px;
             transition: all 0.12s ease;
             white-space: nowrap;
+            min-width: 0;
         }
 
         .btn-split-tab:active {
@@ -611,7 +626,7 @@
         /* 4组打卡按钮 */
         .sets-grid-4 {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
+            grid-template-columns: repeat(4, minmax(0, 1fr));
             gap: 6px;
         }
 
@@ -622,7 +637,7 @@
             color: var(--text-body);
             border-radius: 10px;
             padding: 7px 0;
-            font-size: 0.78rem;
+            font-size: clamp(0.7rem, 2.6vw, 0.78rem);
             font-weight: 800;
             text-align: center;
             cursor: pointer;
@@ -633,6 +648,7 @@
             justify-content: center;
             gap: 2px;
             white-space: nowrap;
+            min-width: 0;
         }
 
         .btn-set-pill:active {
@@ -903,7 +919,7 @@
         /* 底部 5 标签导航栏 */
         .bottom-nav-bar {
             position: fixed;
-            bottom: 12px;
+            bottom: calc(12px + env(safe-area-inset-bottom, 0px));
             left: 50%;
             transform: translateX(-50%);
             width: calc(100% - 20px);
@@ -915,7 +931,7 @@
             border-radius: 22px;
             box-shadow: 0 10px 25px rgba(180, 130, 90, 0.2);
             display: grid;
-            grid-template-columns: repeat(5, 1fr);
+            grid-template-columns: repeat(5, minmax(0, 1fr));
             padding: 5px;
             gap: 3px;
             z-index: 100;
