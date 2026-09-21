@@ -1,0 +1,20 @@
+{
+  "name": "fithub",
+  "version": "1.0.0",
+  "private": true,
+  "description": "FitHub - 元气萌系健身伴侣与3D动作图解 (三分化推拉腿 · 3D肌肉解剖动效 · 多端云同步)",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "pinia": "^2.3.1",
+    "vue": "^3.5.13"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.2.1",
+    "vite": "^6.1.0"
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "name": "FitHub · 元气健身伴侣",
+  "short_name": "FitHub",
+  "description": "科学三分化推拉腿增肌训练与饮食追踪 PWA",
+  "start_url": "/fit/",
+  "scope": "/fit/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#fdf8f4",
+  "theme_color": "#fdf8f4",
+  "icons": [
+    {
+      "src": "/fit/android-chrome-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/fit/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/fit/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ]
+}
