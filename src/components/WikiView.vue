@@ -60,7 +60,7 @@ function openGuide(ex) {
         @click="activeWikiTab = 'all'"
       >
         <span>📚</span>
-        <span>全部器械动作 ({{ store.exercises.length }})</span>
+        <span class="wiki-tab-text">全部器械 ({{ store.exercises.length }})</span>
       </button>
 
       <button 
@@ -69,7 +69,7 @@ function openGuide(ex) {
         @click="activeWikiTab = 'fav'"
       >
         <span>⭐</span>
-        <span>我的器械收藏 ({{ store.favorites.length }})</span>
+        <span class="wiki-tab-text">我的收藏 ({{ store.favorites.length }})</span>
       </button>
     </div>
 
@@ -89,9 +89,8 @@ function openGuide(ex) {
         <button 
           v-for="opt in muscleOptions"
           :key="opt.val"
-          class="pill-tag"
+          class="pill-tag filter-pill"
           :class="muscleFilter === opt.val ? 'tag-target' : 'tag-equip'"
-          style="cursor: pointer;"
           @click="muscleFilter = opt.val"
         >
           {{ opt.label }}
@@ -125,7 +124,7 @@ function openGuide(ex) {
         <!-- Main Info -->
         <div class="wiki-item-info">
           <div class="wiki-item-header">
-            <div style="display: flex; align-items: center; gap: 6px; min-width: 0;">
+            <div class="wiki-title-box">
               <span class="wiki-item-title">{{ ex.name }}</span>
               <button 
                 class="btn-star-fav"
@@ -140,7 +139,7 @@ function openGuide(ex) {
 
           <div class="wiki-item-en">🏷️ {{ ex.en }}</div>
 
-          <div class="ex-badges-row" style="margin-top: 4px;">
+          <div class="ex-badges-row">
             <span class="pill-tag tag-target">🎯 {{ ex.muscle }}</span>
             <span class="pill-tag tag-equip">🏗️ {{ ex.equip }}</span>
             <span class="pill-tag tag-sets">⚖️ {{ ex.starter_weight }}</span>
@@ -152,15 +151,62 @@ function openGuide(ex) {
 </template>
 
 <style scoped>
+.wiki-view-container {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+.wiki-tab-group {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+.wiki-tab-btn {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 6px;
+  border-radius: var(--radius-btn);
+  border: 1.5px solid var(--border-card);
+  background: #fff;
+  color: var(--text-body);
+  font-size: clamp(0.72rem, 2.9vw, 0.82rem);
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  transition: all 0.2s ease;
+}
+.wiki-tab-btn.active {
+  background: var(--cute-coral);
+  color: #fff;
+  border-color: var(--cute-coral);
+  box-shadow: 0 4px 10px rgba(255, 107, 87, 0.25);
+}
+.wiki-tab-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .wiki-filter-card {
   background: var(--bg-card);
   border: 1.5px solid var(--border-card);
   border-radius: var(--radius-card);
   padding: 10px 12px;
   margin-bottom: 12px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 .wiki-search-box {
   margin-bottom: 8px;
+  width: 100%;
 }
 .wiki-search-input {
   width: 100%;
@@ -170,12 +216,21 @@ function openGuide(ex) {
   font-size: 0.82rem;
   background: #fdfaf6;
   outline: none;
+  box-sizing: border-box;
 }
 .wiki-filter-scroll {
   display: flex;
   gap: 6px;
   overflow-x: auto;
-  padding-bottom: 2px;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 4px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+.filter-pill {
+  cursor: pointer;
+  flex-shrink: 0;
 }
 .wiki-empty-state {
   text-align: center;
@@ -187,6 +242,31 @@ function openGuide(ex) {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+.wiki-card-item {
+  background: #fff;
+  border: 1.5px solid #ecdcd0;
+  border-radius: 16px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  cursor: pointer;
+  transition: border-color 0.2s ease, transform 0.1s ease;
+}
+.wiki-card-item:hover {
+  border-color: #d6c2b2;
+}
+.wiki-card-item:active {
+  transform: scale(0.99);
 }
 .wiki-item-thumb {
   width: 50px;
@@ -196,36 +276,68 @@ function openGuide(ex) {
   background: #fff;
   border: 1px solid #ebdcd0;
   flex-shrink: 0;
+  margin-top: 1px;
 }
 .wiki-item-info {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  overflow: hidden;
 }
 .wiki-item-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+}
+.wiki-title-box {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  flex: 1;
 }
 .wiki-item-title {
-  font-size: 0.95rem;
+  font-size: 0.92rem;
   font-weight: 800;
   color: var(--text-title);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  min-width: 0;
 }
 .wiki-guide-link {
   font-size: 0.72rem;
   color: var(--cute-coral);
   font-weight: 700;
   flex-shrink: 0;
+  white-space: nowrap;
 }
 .wiki-item-en {
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   color: var(--text-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  margin: 2px 0;
+  width: 100%;
+  min-width: 0;
+}
+.ex-badges-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+  width: 100%;
+  min-width: 0;
+}
+.ex-badges-row .pill-tag {
+  font-size: 0.68rem;
+  padding: 1.5px 6px;
+  line-height: 1.3;
 }
 </style>

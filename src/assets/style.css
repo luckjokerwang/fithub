@@ -47,6 +47,17 @@
         html, body {
             overflow-x: hidden;
             width: 100%;
+            max-width: 100vw;
+            position: relative;
+        }
+
+        #app {
+            width: 100%;
+            max-width: 100vw;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
 
         body {
@@ -559,7 +570,12 @@
             border-radius: var(--radius-pill);
             font-size: 0.72rem;
             font-weight: 700;
-            white-space: nowrap;
+            white-space: normal;
+            word-break: break-word;
+            max-width: 100%;
+            display: inline-flex;
+            align-items: center;
+            line-height: 1.3;
         }
 
         .tag-target { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
@@ -722,21 +738,33 @@
             display: flex;
             flex-direction: column;
             gap: 10px;
+            width: 100%;
+            max-width: 100%;
+            box-sizing: border-box;
         }
 
         .wiki-card-item {
             background: #fff;
             border: 1.5px solid #ecdcd0;
             border-radius: 16px;
-            padding: 12px;
+            padding: 10px 12px;
             display: flex;
-            flex-direction: column;
-            gap: 6px;
-            transition: border-color 0.2s ease;
+            flex-direction: row;
+            align-items: flex-start;
+            gap: 10px;
+            width: 100%;
+            max-width: 100%;
+            min-width: 0;
+            box-sizing: border-box;
+            cursor: pointer;
+            transition: border-color 0.2s ease, transform 0.1s ease;
         }
 
         .wiki-card-item:hover {
             border-color: #d6c2b2;
+        }
+        .wiki-card-item:active {
+            transform: scale(0.99);
         }
 
         /* GitHub 风格连续打卡热力图模块 */

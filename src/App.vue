@@ -97,6 +97,10 @@ function switchNavTab(tabId) {
 <style scoped>
 .main-content-area {
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: hidden;
+  box-sizing: border-box;
 }
 .floating-rest-timer {
   position: fixed;
